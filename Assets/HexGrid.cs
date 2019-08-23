@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using QPath;
 using System.IO;
+using System.Linq;
 
 public class HexGrid : MonoBehaviour, IQPathWorld {
 
@@ -28,10 +29,10 @@ public class HexGrid : MonoBehaviour, IQPathWorld {
         paintArmy();
         //CurrentT = Player;
         //CurrentUnits = CurrentT.units;
-        
+
     }
 
-    public bool animOn = false;
+    public bool animOn = true;
     public GameObject HexPrefab;
     private Hex[,] hexes;
     private Dictionary<Hex, GameObject> hexToGameObjectMap;
@@ -40,6 +41,7 @@ public class HexGrid : MonoBehaviour, IQPathWorld {
     private Dictionary<Unit, GameObject> UnitToGameObject;
     public Material[] HexMaterials;
     public Material[] PawnMaterial;
+    public Material[] SelectionMaterials;
     public GameObject TestUnit;
     public Team Player;
     public Team AI;
@@ -53,34 +55,35 @@ public class HexGrid : MonoBehaviour, IQPathWorld {
     int dimensionsY = 40;
     int dimensionsZ = 80;
 
-    void Update()
+	//Function to run through movement of each unit in a squad
+    public IEnumerator GroupMovement(List<Unit>squad)
     {
-        if (Input.GetKeyDown(KeyCode.Space))
-        {
-            StartCoroutine(MovementCheck());
-        }
-               
-    }
-
-    public IEnumerator MovementCheck()
-    {
-        foreach (Unit u in CurrentT.units)
+        Debug.Log("GroupMovement Starts");
+        foreach (Unit u in squad)
         {
             yield return UnitMove(u);
+            yield return new WaitForSeconds(0.5f);
         }
-        
+        yield return new WaitForSeconds(1f);
+        Debug.Log("GroupMovement finishes");
+
     }
 
+	//Each single units movement
     public IEnumerator UnitMove(Unit u)
     {
-        while (u.DoMove())
+        if (u.WoundsRem > 0)
         {
-            Debug.Log("true return");
-            yield return new WaitForSeconds(0.5f);
-            
+            while (u.DoMove())
+            {
+                //Debug.Log("true return");
+                yield return new WaitForSeconds(0.1f);
+
+            }
         }
     }
 
+	//Function to clean up at phase end
     public void FinishPhase()
     {
 
@@ -91,6 +94,7 @@ public class HexGrid : MonoBehaviour, IQPathWorld {
 
     }
 
+	//Function to change player on turn end
     public void setCurrent(string team)
     {
         switch (team)
@@ -106,13 +110,14 @@ public class HexGrid : MonoBehaviour, IQPathWorld {
         }
     }
 
+	//Function that generates the hex map
     public void GenerateMap()
     {
         hexes = new Hex[dimensionsZ, dimensionsY];
         hexToGameObjectMap = new Dictionary<Hex, GameObject>();
         gameObjectToHexMap = new Dictionary<GameObject, Hex>();
 
-        for (int column = 0; column < dimensionsZ; column++)
+        for (int column = 0; column < dimensionsZ; column++)				//Implements https://www.redblobgames.com/grids/hexagons/
         {
             for(int row = 0; row < dimensionsY; row++)
             {
@@ -142,6 +147,7 @@ public class HexGrid : MonoBehaviour, IQPathWorld {
         }
     }
 
+	//Testing function for makeing single units
     public void singleUnit()
     {
         Unit u = new Unit("Marine1", "Marine", "Squad 1");
@@ -152,6 +158,7 @@ public class HexGrid : MonoBehaviour, IQPathWorld {
         creatunit(o, TestUnit, 24, 3);
     }
 
+	//Function for each specific unit.
     public void creatunit(Unit unit, GameObject prefab, int x, int y)
     {
 
@@ -186,6 +193,7 @@ public class HexGrid : MonoBehaviour, IQPathWorld {
 
     }
 
+	//Dictionary get and set functions
     public Hex GetHexAt(int x, int y)
     {
         return hexes[x, y];
@@ -247,6 +255,7 @@ public class HexGrid : MonoBehaviour, IQPathWorld {
         return null;
     }
 
+	//Function to read in from the unit list file
     public void BuildArmies()
     {
         using (var reader = new StreamReader(@"assets\units.csv"))
@@ -292,6 +301,7 @@ public class HexGrid : MonoBehaviour, IQPathWorld {
         }
     }
 
+	//Draws each of the created units
     public void spawnArmy()
     {
         int i = 0;
@@ -318,6 +328,7 @@ public class HexGrid : MonoBehaviour, IQPathWorld {
 
     }
 
+	//Testing variation function
     public void spawnArmy2()
     {
 
@@ -343,6 +354,7 @@ public class HexGrid : MonoBehaviour, IQPathWorld {
 
     }
 
+	//Testing veriation function
     public void spawnArmy3()
     {
 
@@ -407,10 +419,11 @@ public class HexGrid : MonoBehaviour, IQPathWorld {
 
     }
 
+	//Function that assigns appropirate material based on teams and squads
     public void paintArmy()
     {
 
-        List<Unit> Squad = new List<Unit>();
+        //List<Unit> Squad = new List<Unit>();
 
         foreach (Unit u in Player.units)
         {
@@ -453,6 +466,7 @@ public class HexGrid : MonoBehaviour, IQPathWorld {
         }
     }
 
+	//Appends units to squads
     public List<Unit> squad(Team team, Unit u)
     {
         List<Unit> list = new List<Unit>();
@@ -467,6 +481,7 @@ public class HexGrid : MonoBehaviour, IQPathWorld {
         return list;
     }
 
+	//Function creats spawn areas out of the coordinate
     public List<Hex> spawnArea(int col, int row )
     {
 
@@ -494,6 +509,7 @@ public class HexGrid : MonoBehaviour, IQPathWorld {
 
     }
 
+	//Function sets team at the end of a turn
     public void setPlayer(Team team)
     {
         CurrentT = team;
@@ -515,7 +531,6 @@ public class HexGrid : MonoBehaviour, IQPathWorld {
                     currentPhase = Phase.Fight;
                     break;
                 case Phase.Fight:
-                    turnNum++;
                     Player = CurrentT;
                     ResetMoves();
                     setCurrent("AI");
@@ -548,19 +563,66 @@ public class HexGrid : MonoBehaviour, IQPathWorld {
         }
     }
 
+	//Resets all units movement values
     public void ResetMoves()
     {
         foreach (Unit u in Player.units)
         {
             u.refreshmovment();
+            u.melee = false;
+            u.ranged = false;
         }
 
         foreach (Unit u in AI.units)
         {
             u.refreshmovment();
+            u.melee = false;
+            u.ranged = false;
         }
     }
 
+	//Function finds movement range of a unit.
+    public List<Hex> Range(int range , Hex hex)
+    {
+
+        List<Hex> hexList = new List<Hex>();
+        range = range + 1;
+        int Col = 0-range;
+        //Debug.Log(i);
+        {
+            while (Col <= range)
+            {
+                int Row = 0-range;
+                //Debug.Log(o);
+                while (Row<= range)
+                {
+
+                    int newCol = hex.Col + Col;
+                    int newRow = hex.Row + Row;
+
+                    //Debug.Log(newCol + ":" + newRow);
+
+                    if (newCol >= 0 && newRow >= 0)
+                    {
+                        Hex newhex = GetHexAt(newCol, newRow);
+                        if (((newhex.Col + newhex.Row + newhex.Aggregate) == 0) && Hex.Distance(hex, newhex) < range)
+                        {
+                            hexList.Add(newhex);
+
+                        }
+                    }
+
+
+
+
+                    Row++;
+                }
+                Col++;
+            }
+        }
+
+        return hexList;
+    }
 }
 
 

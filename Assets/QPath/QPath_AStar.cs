@@ -70,7 +70,7 @@ namespace QPath {
                     }
 
                     float total_pathfinding_cost_to_neighbor =
-                        neighbour.EntryCost(g_score[current], current, unit);
+                        neighbour.AggregateCostToEnter(g_score[current], current, unit);
 
                     if (total_pathfinding_cost_to_neighbor < 0)
                     {

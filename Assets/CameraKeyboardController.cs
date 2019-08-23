@@ -2,14 +2,10 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+//Controls camera movement
 public class CameraKeyboardController : MonoBehaviour {
 
-	// Use this for initialization
-	void Start () {
-		
-	}
     float PanSpeed = 10;
-	// Update is called once per frame
 	void Update () {
         Vector3 MovementVector = new Vector3
             (

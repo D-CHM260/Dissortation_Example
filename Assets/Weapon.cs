@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+
+//Simple class to initialize some example weapons
 public class Weapon {
 
     public string name;
@@ -39,7 +41,7 @@ public class Weapon {
         this.name = "Bolter";
         this.type = "Rapid Fire 1";
         this.attacks = 1;
-        this.range = 24;
+        this.range = 240;
         this.strength = 2;
         this.ap = 3;
         this.damage = 3;

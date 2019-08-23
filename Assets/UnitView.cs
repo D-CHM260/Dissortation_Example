@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+
+//Visualizes the units movements
 public class UnitView : MonoBehaviour {
 
     void Start()
@@ -11,7 +13,7 @@ public class UnitView : MonoBehaviour {
     Vector3 newposition;
 
     Vector3 currentVelocity;
-    float movement = 0.5f;
+    float movement = 0.1f;
 
 	public void onUnitMoved(Hex oldHex, Hex newHex)
     {

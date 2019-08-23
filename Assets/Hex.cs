@@ -4,6 +4,8 @@ using System.Linq;
 using UnityEngine;
 using QPath;
 
+
+//Class for storing Hex information
 public class Hex : IQPathTile {
 
     public readonly int Col;  //column
@@ -96,31 +98,28 @@ public class Hex : IQPathTile {
         return units.ToArray();
     }
 
+	//Gets position of hex
     public Vector3 PositionFromCamera()
     {
         return HexGrid.GetHexPosition(this);
     }
 
-    //public Vector3 PositionFromCamera(Vector3 cameraPosition, float numRows, float numColumns)
-   // {
-        //Vector3 Position = position();
-        //return Position;
-   // }
-
-    public int movementMultiplier()
+	//Hex movment cost used in pathfinding
+    public int BaseMovementCost()
     {
 
         Unit[] u = Units();
+        int i = 1;
         if (u.Length > 0)
         {
-            return 2;
+            i = 100;
         }
-        else
-        {
-            return 1;
-        }
+
+        return i;
+       
     }
 
+	//Function creats neighbours list
     Hex[] neighbours;
 
     public IQPathTile[] GetNeighbours()
@@ -152,6 +151,7 @@ public class Hex : IQPathTile {
 
     }
 
+	//Functiont to get the neighbour list
     public List<Hex> GetNeighboursList()
     {;
         List<Hex> neighbours = new List<Hex>();
@@ -167,12 +167,13 @@ public class Hex : IQPathTile {
 
     }
 
-    public float EntryCost(float costSoFar, IQPathTile sourceTile, IQPathUnit theUnit)
+	//Cost to enter after modifiers
+    public float AggregateCostToEnter(float costSoFar, IQPathTile sourceTile, IQPathUnit theUnit)
     {
-        return ((Unit)theUnit).PathValue(this, costSoFar);
+        return ((Unit)theUnit).AggregateTurnsToEnterHex(this, costSoFar);
     }
 
-
+	//Cost estimate, Simple distance measurment right now
     public static float CostEstimate(IQPathTile aa, IQPathTile bb)
     {
 
@@ -182,6 +183,7 @@ public class Hex : IQPathTile {
 
     }
 
+	//Distance measurment function
     public static float Distance(Hex a, Hex b)
     {
         // WARNING: Probably Wrong for wrapping
@@ -199,9 +201,10 @@ public class Hex : IQPathTile {
         return Dis ;
     }
 
+	//Movement values for different terrains
     public float terrainModifier()
     {
-        float modifier = 1;      
+        float modifier = 0;      
         switch (terrain)
         {
             case Terrain.Normal:
@@ -211,7 +214,7 @@ public class Hex : IQPathTile {
                 modifier = 0.8f;
                 break;
             case Terrain.Elevation:
-                modifier = 1.1f;
+                modifier = 1.2f;
                 break;
         }
         return modifier;

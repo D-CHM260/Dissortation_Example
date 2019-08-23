@@ -3,8 +3,14 @@ using System.Collections.Generic;
 using UnityEngine;
 using QPath;
 using System;
+using System.Linq;
 
-public class Unit : IQPathUnit {
+
+//Class to store unit instances
+public class Unit : IQPathUnit
+{
+
+    HexGrid hexG = GameObject.FindObjectOfType<HexGrid>();
 
     public string name;
     public int Wounds;
@@ -20,6 +26,8 @@ public class Unit : IQPathUnit {
     public int movesRem;
     public int save;
     public string squad;
+    public bool melee;
+    public bool ranged;
     public Weapon[] weapons = new Weapon[2] { new Weapon(), new Weapon() };
 
     public Hex Hex { get; protected set; }
@@ -57,13 +65,15 @@ public class Unit : IQPathUnit {
         this.movesRem = 4;
         this.save = 2;
         this.squad = Squad;
+        this.melee = false;
+        this.ranged = false;
         this.weapons[0].Reaper();
         this.weapons[1].Bolter();
     }
 
 
 
-    public void SetHex (Hex newhex)
+    public void SetHex(Hex newhex)
     {
         Hex oldhex = Hex;
         if (Hex != null)
@@ -75,7 +85,7 @@ public class Unit : IQPathUnit {
 
         Hex.AddUnit(this);
 
-        if(onUnitMoved != null)
+        if (onUnitMoved != null)
         {
             onUnitMoved(oldhex, newhex);
         }
@@ -112,13 +122,13 @@ public class Unit : IQPathUnit {
 
         //if(hexPath.Count > 0)
         //{
-            //this.hexPath.Dequeue();
+        //this.hexPath.Dequeue();
         //}
     }
 
     public bool WaitingForOrder()
     {
-        if ( movesRem>0 && (hexPath == null || hexPath.Count == 0))
+        if (movesRem > 0 && (hexPath == null || hexPath.Count == 0))
         {
             return false;
         }
@@ -132,57 +142,102 @@ public class Unit : IQPathUnit {
     public bool DoMove()
     {
 
-        if(movesRem <= 0)
+        if (movesRem <= 0)
         {
             return false;
         }
 
-        if(hexPath == null || hexPath.Count == 0)
+        if (hexPath == null || hexPath.Count == 0)
         {
             return false;
         }
 
-        Hex currentHex= hexPath[0];
+        Hex currentHex = hexPath[0];
         Hex newHex = hexPath[1];
-
-        
-
-        if (1 > movesRem && movesRem < moves)
+        Hex LastHex = hexPath[hexPath.Count - 1];
+        Unit[] unitCheck = newHex.Units();
+        bool check = true;
+        if (unitCheck.Length > 0 /*&& (hexPath.Count)>movesRem && FinalHexUnits.Length>0*/)
         {
-            return false;
+            check = false;
+            //Debug.Log("Unit Already Present");
         }
 
-        hexPath.RemoveAt(0);
 
-        if(hexPath.Count == 1)
+
+        if (check)
         {
-            hexPath = null;
+            if (1 > movesRem && movesRem < moves)
+            {
+                return false;
+            }
+
+            hexPath.RemoveAt(0);
+
+            if (hexPath.Count == 1)
+            {
+                hexPath = null;
+            }
+            SetHex(newHex);
+            movesRem = Mathf.Max(movesRem - 1, 0);
         }
 
-        SetHex(newHex);
+        else
+        {
+            hexPath = QPath.QPath.FindPath<Hex>(hexG, this, this.Hex, LastHex, Hex.CostEstimate).ToList();
+            unitCheck = hexPath[1].Units();
+            if (unitCheck.Length > 0)
+            {
+                hexPath = null;
+            }
+        }
 
-        movesRem = Mathf.Max(movesRem - 1, 0);
+
+
 
         return hexPath != null && movesRem > 0;
-            
-        
+
+
     }
 
-    public int BaseMovementCost(Hex hex)
+    public int MovementCostToEnterHex(Hex hex)
     {
-        return 1;
+        return hex.BaseMovementCost();
     }
 
-    public float PathValue(Hex hex, float turnsToDate)
+    public float AggregateTurnsToEnterHex(Hex hex, float turnsToDate)
     {
-        float BaseTurnsToEnterHex = BaseMovementCost(hex) / moves;
-        float TurnsRem = movesRem / moves;
+        float BaseTurnsToEnterHex = MovementCostToEnterHex(hex) / moves;
 
-        float FinishedMoves = Mathf.Floor(turnsToDate);
-        float FractionFinished = turnsToDate - turnsToDate;
+        if (BaseTurnsToEnterHex < 0)
+        {
 
-        float flt = 1;
-        return flt;
+            return -99999;
+        }
+
+        if (BaseTurnsToEnterHex > 1)
+        {
+
+            BaseTurnsToEnterHex = 1;
+        }
+
+        float TurnsToDateWole = Mathf.Floor(turnsToDate);
+        float TurnsToDateFraction = turnsToDate - TurnsToDateWole;
+
+        float turnsUsedAfterThismove = TurnsToDateFraction + BaseTurnsToEnterHex;
+
+        if (turnsUsedAfterThismove > 1)
+        {
+
+
+            turnsUsedAfterThismove = 1;
+
+        }
+
+
+
+        return TurnsToDateWole + turnsUsedAfterThismove;
+
     }
 
     public float MovmementValue(IQPathTile SourceTile, IQPathTile destinationTile)
@@ -201,27 +256,27 @@ public class Unit : IQPathUnit {
     }
 
 
-    public int Fire(Unit Defender, bool overwatch)
+    public int Fire(Unit Defender, bool overwatch, Weapon weap)
     {
-        Weapon RangedWeap = weapons[1];
+        Weapon RangedWeap = weap;
         int attackNumber = RangedWeap.attacks;
         float distance = Hex.Distance(Hex, Defender.Hex);
 
-        Debug.Log(
+        /*Debug.Log(
             "Weapon: " + 
             RangedWeap.name +
             " Attacks: " +
             attackNumber +
             " Distance: " +
-            distance);
+            distance);*/
 
-        if ((RangedWeap.range/2)> distance)
+        if ((RangedWeap.range / 2) > distance)
         {
             attackNumber = attackNumber * 2;
-            Debug.Log("Attack Doubled: " + attackNumber);
+            //Debug.Log("Attack Doubled: " + attackNumber);
         }
 
-        
+
 
         int WoundRolls = 10;
 
@@ -239,11 +294,11 @@ public class Unit : IQPathUnit {
             attackNumber--;
         }
 
-        
+
 
         while (attackNumber > 0 && overwatch)
         {
-            Debug.Log("should not fire");
+            //Debug.Log("should not fire");
             int roll = UnityEngine.Random.Range(1, 6);
             if (roll < 6)
             {
@@ -256,7 +311,7 @@ public class Unit : IQPathUnit {
             attackNumber--;
         }
 
-        Debug.Log("WoundRolls: " + WoundRolls);
+        //Debug.Log("WoundRolls: " + WoundRolls);
 
 
         int WoundsPassed = 0;
@@ -264,14 +319,14 @@ public class Unit : IQPathUnit {
         while (WoundRolls > 0)
         {
             int roll = UnityEngine.Random.Range(1, 6) + 2;
-            Debug.Log(roll);
+            //Debug.Log(roll);
             if (RangedWeap.strength > Defender.Toughness)
             {
-                Debug.Log("(RangedWeap.strength > Defender.Toughness)");
+                //Debug.Log("(RangedWeap.strength > Defender.Toughness)");
 
                 if (RangedWeap.strength > (Defender.Toughness * 2))
                 {
-                    Debug.Log("(RangedWeap.strength > (Defender.Toughness * 2))");
+                    //Debug.Log("(RangedWeap.strength > (Defender.Toughness * 2))");
                     if (roll > 2)
                     {
                         WoundsPassed++;
@@ -295,7 +350,7 @@ public class Unit : IQPathUnit {
             }
             else if (RangedWeap.strength == Defender.Toughness)
             {
-                Debug.Log("(RangedWeap.strength == Defender.Toughness)");
+                //Debug.Log("(RangedWeap.strength == Defender.Toughness)");
                 if (roll > 4)
                 {
                     WoundsPassed++;
@@ -308,16 +363,16 @@ public class Unit : IQPathUnit {
             }
             else if (RangedWeap.strength < Defender.Toughness)
             {
-                Debug.Log("(RangedWeap.strength < Defender.Toughness)");
+                //Debug.Log("(RangedWeap.strength < Defender.Toughness)");
                 if ((RangedWeap.strength * 2) < Defender.Toughness)
                 {
-                    Debug.Log("((RangedWeap.strength * 2) < Defender.Toughness)");
+                    //Debug.Log("((RangedWeap.strength * 2) < Defender.Toughness)");
 
                     if (roll >= 6)
                     {
                         WoundsPassed++;
                         WoundRolls--;
-                        Debug.Log("Rolled: " + roll);
+                        //Debug.Log("Rolled: " + roll);
                     }
                     else
                     {
@@ -332,29 +387,30 @@ public class Unit : IQPathUnit {
             }
             else if ((RangedWeap.strength * 2) < Defender.Toughness)
             {
-                Debug.Log("((RangedWeap.strength * 2) < Defender.Toughness)");
+                //Debug.Log("((RangedWeap.strength * 2) < Defender.Toughness)");
 
                 if (roll >= 6)
                 {
                     WoundsPassed++;
                     WoundRolls--;
-                    Debug.Log("Rolled: " + roll);
+                    //Debug.Log("Rolled: " + roll);
                 }
                 else
                 {
-                    WoundRolls --;
+                    WoundRolls--;
                 }
             }
 
         }
 
-        Debug.Log("Wounds Passed: " + WoundsPassed);
+        //Debug.Log("Wounds Passed: " + WoundsPassed);
 
         int DamageingShots = 0;
         while (WoundsPassed > 0)
         {
-            int roll = UnityEngine.Random.Range(1, 6);
-            if ((roll - RangedWeap.ap) >= Defender.save)
+            //Debug.Log(Defender.Hex.terrainModifier());
+            int roll = (UnityEngine.Random.Range(1, 6)); /*+ Defender.Hex.terrainModifier())*/
+            if ((roll - RangedWeap.ap) >= (Defender.save))
             {
                 WoundsPassed = 0;
             }
@@ -363,11 +419,10 @@ public class Unit : IQPathUnit {
                 DamageingShots++;
             }
         }
+        //Debug.Log("Damage Passed: " + DamageingShots);
 
-        Debug.Log("Damage Passed: " + DamageingShots);
-
-        int damage = Convert.ToInt32(Math.Round(DamageingShots * Defender.Hex.terrainModifier()));
-        return damage;
+        float damage = (float)DamageingShots * Defender.Hex.terrainModifier();
+        return (int)Math.Round(damage);
 
 
     }
@@ -375,17 +430,19 @@ public class Unit : IQPathUnit {
 
     public void damageTaken(int damage)
     {
-        this.WoundsRem = this.WoundsRem - damage;
+        GameObject unitThis = hexG.GetUnitGO(this);
+        Transform t = unitThis.transform;
+        string dmgTXT = damage.ToString();
+        PopUpController.CreateTXT(dmgTXT, t);
+        this.WoundsRem = this.WoundsRem - damage;    
     }
-
-
     public bool checkCharge(HashSet<Unit> EnemyUnits)
     {
         bool CanUnitChargeAnybody = false;
 
-        foreach(Unit u in EnemyUnits)
+        foreach (Unit u in EnemyUnits)
         {
-            if(Hex.Distance(this.Hex, u.Hex) < 12)
+            if (Hex.Distance(this.Hex, u.Hex) < 12)
             {
                 CanUnitChargeAnybody = true;
             }
@@ -394,116 +451,4 @@ public class Unit : IQPathUnit {
         return CanUnitChargeAnybody;
 
     }
-
-    public int Melee(Unit Defender)
-    {
-        Weapon RangedWeap = weapons[0];
-        int attackNumber = Convert.ToInt32(RangedWeap.type[1]);
-
-        int WoundRolls = 0;
-
-        while (attackNumber > 0)
-        {
-            int roll = UnityEngine.Random.Range(1, 6);
-            if (roll < this.Weapon_Skill)
-            {
-                attackNumber = 0;
-            }
-            else
-            {
-                WoundRolls++;
-            }
-            attackNumber--;
-        }
-
-        int WoundsPassed = 0;
-
-        while (WoundRolls > 0)
-        {
-            int roll = UnityEngine.Random.Range(1, 6);
-            if (RangedWeap.strength > (Defender.Toughness * 2))
-            {
-                if (roll > 2)
-                {
-                    WoundsPassed++;
-                    WoundRolls--;
-                }
-
-                else
-                {
-                    WoundRolls = 0;
-                }
-            }
-            else if (RangedWeap.strength > Defender.Toughness)
-            {
-                if (roll > 3)
-                {
-                    WoundsPassed++;
-                    WoundRolls--;
-                }
-                else
-                {
-                    WoundRolls = 0;
-                }
-            }
-            else if (RangedWeap.strength == Defender.Toughness)
-            {
-                if (roll > 4)
-                {
-                    WoundsPassed++;
-                    WoundRolls--;
-                }
-                else
-                {
-                    WoundRolls = 0;
-                }
-            }
-            else if (RangedWeap.strength < Defender.Toughness)
-            {
-                if (roll > 5)
-                {
-                    WoundsPassed++;
-                    WoundRolls--;
-                }
-                else
-                {
-                    WoundRolls = 0;
-                }
-            }
-            else if ((RangedWeap.strength * 2) < Defender.Toughness)
-            {
-                if (roll > 6)
-                {
-                    WoundsPassed++;
-                    WoundRolls--;
-                }
-                else
-                {
-                    WoundRolls = 0;
-                }
-            }
-
-        }
-
-        int DamageingShots = 0;
-        while (WoundsPassed > 0)
-        {
-            int roll = UnityEngine.Random.Range(1, 6);
-            if ((roll - RangedWeap.ap) >= Defender.save)
-            {
-                WoundsPassed = 0;
-            }
-            else
-            {
-                DamageingShots++;
-            }
-        }
-
-        int damage = Convert.ToInt32(Math.Round(DamageingShots * Defender.Hex.terrainModifier()));
-        return damage;
-
-
-    }
-
-
-}
+}   

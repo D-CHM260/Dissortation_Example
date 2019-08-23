@@ -10,7 +10,7 @@ namespace QPath
 
         IQPathTile[] GetNeighbours();
 
-        float EntryCost(float coastsofar, IQPathTile sourceTile, IQPathUnit theUnit);
+        float AggregateCostToEnter(float coastsofar, IQPathTile sourceTile, IQPathUnit theUnit);
 
     }
 }
