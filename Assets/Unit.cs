@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using QPath;
+using System;
 
 public class Unit : IQPathUnit {
 
@@ -18,6 +19,7 @@ public class Unit : IQPathUnit {
     public int moves;
     public int movesRem;
     public int save;
+    public string squad;
     public Weapon[] weapons = new Weapon[2] { new Weapon(), new Weapon() };
 
     public Hex Hex { get; protected set; }
@@ -28,18 +30,18 @@ public class Unit : IQPathUnit {
     List<Hex> hexPath;
 
 
-    public Unit(string NAME, string Type)
+    public Unit(string NAME, string Type, string Squad)
     {
 
         switch (Type)
         {
-            case "Marine": this.newMarine(NAME); break;
+            case "Marine": this.newMarine(NAME, Squad); break;
 
         }
 
     }
 
-    public void newMarine(string NAME)
+    public void newMarine(string NAME, string Squad)
     {
         this.name = NAME;
         this.Wounds = 6;
@@ -54,6 +56,7 @@ public class Unit : IQPathUnit {
         this.moves = 4;
         this.movesRem = 4;
         this.save = 2;
+        this.squad = Squad;
         this.weapons[0].Reaper();
         this.weapons[1].Bolter();
     }
@@ -158,7 +161,7 @@ public class Unit : IQPathUnit {
 
         SetHex(newHex);
 
-        movesRem = Mathf.Max(movesRem - BaseMovementCost(newHex), 0);
+        movesRem = Mathf.Max(movesRem - 1, 0);
 
         return hexPath != null && movesRem > 0;
             
@@ -198,8 +201,307 @@ public class Unit : IQPathUnit {
     }
 
 
-    public void DoCombat(Unit u)
+    public int Fire(Unit Defender, bool overwatch)
     {
+        Weapon RangedWeap = weapons[1];
+        int attackNumber = RangedWeap.attacks;
+        float distance = Hex.Distance(Hex, Defender.Hex);
+
+        Debug.Log(
+            "Weapon: " + 
+            RangedWeap.name +
+            " Attacks: " +
+            attackNumber +
+            " Distance: " +
+            distance);
+
+        if ((RangedWeap.range/2)> distance)
+        {
+            attackNumber = attackNumber * 2;
+            Debug.Log("Attack Doubled: " + attackNumber);
+        }
+
+        
+
+        int WoundRolls = 10;
+
+        while (attackNumber > 0 && !overwatch)
+        {
+            int roll = UnityEngine.Random.Range(1, 6);
+            if (roll < this.Ballistic_Skill)
+            {
+                attackNumber = 0;
+            }
+            else
+            {
+                WoundRolls++;
+            }
+            attackNumber--;
+        }
+
+        
+
+        while (attackNumber > 0 && overwatch)
+        {
+            Debug.Log("should not fire");
+            int roll = UnityEngine.Random.Range(1, 6);
+            if (roll < 6)
+            {
+                attackNumber = 0;
+            }
+            else
+            {
+                WoundRolls++;
+            }
+            attackNumber--;
+        }
+
+        Debug.Log("WoundRolls: " + WoundRolls);
+
+
+        int WoundsPassed = 0;
+
+        while (WoundRolls > 0)
+        {
+            int roll = UnityEngine.Random.Range(1, 6) + 2;
+            Debug.Log(roll);
+            if (RangedWeap.strength > Defender.Toughness)
+            {
+                Debug.Log("(RangedWeap.strength > Defender.Toughness)");
+
+                if (RangedWeap.strength > (Defender.Toughness * 2))
+                {
+                    Debug.Log("(RangedWeap.strength > (Defender.Toughness * 2))");
+                    if (roll > 2)
+                    {
+                        WoundsPassed++;
+                        WoundRolls--;
+                    }
+
+                    else
+                    {
+                        WoundRolls--;
+                    }
+                }
+                else if (roll > 3)
+                {
+                    WoundsPassed++;
+                    WoundRolls--;
+                }
+                else
+                {
+                    WoundRolls--;
+                }
+            }
+            else if (RangedWeap.strength == Defender.Toughness)
+            {
+                Debug.Log("(RangedWeap.strength == Defender.Toughness)");
+                if (roll > 4)
+                {
+                    WoundsPassed++;
+                    WoundRolls--;
+                }
+                else
+                {
+                    WoundRolls--;
+                }
+            }
+            else if (RangedWeap.strength < Defender.Toughness)
+            {
+                Debug.Log("(RangedWeap.strength < Defender.Toughness)");
+                if ((RangedWeap.strength * 2) < Defender.Toughness)
+                {
+                    Debug.Log("((RangedWeap.strength * 2) < Defender.Toughness)");
+
+                    if (roll >= 6)
+                    {
+                        WoundsPassed++;
+                        WoundRolls--;
+                        Debug.Log("Rolled: " + roll);
+                    }
+                    else
+                    {
+                        WoundRolls--;
+                    }
+                }
+                else if (roll > 5)
+                {
+                    WoundsPassed++;
+                    WoundRolls--;
+                }
+            }
+            else if ((RangedWeap.strength * 2) < Defender.Toughness)
+            {
+                Debug.Log("((RangedWeap.strength * 2) < Defender.Toughness)");
+
+                if (roll >= 6)
+                {
+                    WoundsPassed++;
+                    WoundRolls--;
+                    Debug.Log("Rolled: " + roll);
+                }
+                else
+                {
+                    WoundRolls --;
+                }
+            }
+
+        }
+
+        Debug.Log("Wounds Passed: " + WoundsPassed);
+
+        int DamageingShots = 0;
+        while (WoundsPassed > 0)
+        {
+            int roll = UnityEngine.Random.Range(1, 6);
+            if ((roll - RangedWeap.ap) >= Defender.save)
+            {
+                WoundsPassed = 0;
+            }
+            else
+            {
+                DamageingShots++;
+            }
+        }
+
+        Debug.Log("Damage Passed: " + DamageingShots);
+
+        int damage = Convert.ToInt32(Math.Round(DamageingShots * Defender.Hex.terrainModifier()));
+        return damage;
+
+
+    }
+
+
+    public void damageTaken(int damage)
+    {
+        this.WoundsRem = this.WoundsRem - damage;
+    }
+
+
+    public bool checkCharge(HashSet<Unit> EnemyUnits)
+    {
+        bool CanUnitChargeAnybody = false;
+
+        foreach(Unit u in EnemyUnits)
+        {
+            if(Hex.Distance(this.Hex, u.Hex) < 12)
+            {
+                CanUnitChargeAnybody = true;
+            }
+        }
+
+        return CanUnitChargeAnybody;
+
+    }
+
+    public int Melee(Unit Defender)
+    {
+        Weapon RangedWeap = weapons[0];
+        int attackNumber = Convert.ToInt32(RangedWeap.type[1]);
+
+        int WoundRolls = 0;
+
+        while (attackNumber > 0)
+        {
+            int roll = UnityEngine.Random.Range(1, 6);
+            if (roll < this.Weapon_Skill)
+            {
+                attackNumber = 0;
+            }
+            else
+            {
+                WoundRolls++;
+            }
+            attackNumber--;
+        }
+
+        int WoundsPassed = 0;
+
+        while (WoundRolls > 0)
+        {
+            int roll = UnityEngine.Random.Range(1, 6);
+            if (RangedWeap.strength > (Defender.Toughness * 2))
+            {
+                if (roll > 2)
+                {
+                    WoundsPassed++;
+                    WoundRolls--;
+                }
+
+                else
+                {
+                    WoundRolls = 0;
+                }
+            }
+            else if (RangedWeap.strength > Defender.Toughness)
+            {
+                if (roll > 3)
+                {
+                    WoundsPassed++;
+                    WoundRolls--;
+                }
+                else
+                {
+                    WoundRolls = 0;
+                }
+            }
+            else if (RangedWeap.strength == Defender.Toughness)
+            {
+                if (roll > 4)
+                {
+                    WoundsPassed++;
+                    WoundRolls--;
+                }
+                else
+                {
+                    WoundRolls = 0;
+                }
+            }
+            else if (RangedWeap.strength < Defender.Toughness)
+            {
+                if (roll > 5)
+                {
+                    WoundsPassed++;
+                    WoundRolls--;
+                }
+                else
+                {
+                    WoundRolls = 0;
+                }
+            }
+            else if ((RangedWeap.strength * 2) < Defender.Toughness)
+            {
+                if (roll > 6)
+                {
+                    WoundsPassed++;
+                    WoundRolls--;
+                }
+                else
+                {
+                    WoundRolls = 0;
+                }
+            }
+
+        }
+
+        int DamageingShots = 0;
+        while (WoundsPassed > 0)
+        {
+            int roll = UnityEngine.Random.Range(1, 6);
+            if ((roll - RangedWeap.ap) >= Defender.save)
+            {
+                WoundsPassed = 0;
+            }
+            else
+            {
+                DamageingShots++;
+            }
+        }
+
+        int damage = Convert.ToInt32(Math.Round(DamageingShots * Defender.Hex.terrainModifier()));
+        return damage;
+
 
     }
 

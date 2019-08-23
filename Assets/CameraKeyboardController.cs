@@ -8,7 +8,7 @@ public class CameraKeyboardController : MonoBehaviour {
 	void Start () {
 		
 	}
-    float PanSpeed = 3;
+    float PanSpeed = 10;
 	// Update is called once per frame
 	void Update () {
         Vector3 MovementVector = new Vector3

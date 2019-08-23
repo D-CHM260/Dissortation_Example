@@ -15,7 +15,7 @@ namespace QPath {
             
             ) where T : IQPathTile
         {
-            Debug.Log("Running Status");
+            //Debug.Log("Running Status");
 
             if (world == null || unit == null || starttile == null || endtile == null)
             {

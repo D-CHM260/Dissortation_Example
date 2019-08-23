@@ -109,7 +109,16 @@ public class Hex : IQPathTile {
 
     public int movementMultiplier()
     {
-        return 1;
+
+        Unit[] u = Units();
+        if (u.Length > 0)
+        {
+            return 2;
+        }
+        else
+        {
+            return 1;
+        }
     }
 
     Hex[] neighbours;
@@ -143,6 +152,21 @@ public class Hex : IQPathTile {
 
     }
 
+    public List<Hex> GetNeighboursList()
+    {;
+        List<Hex> neighbours = new List<Hex>();
+
+        neighbours.Add(HexGrid.GetHexAt(Col + 1, Row + 0));
+        neighbours.Add(HexGrid.GetHexAt(Col - 1, Row + 0));
+        neighbours.Add(HexGrid.GetHexAt(Col + 0, Row + 1));
+        neighbours.Add(HexGrid.GetHexAt(Col + 0, Row - 1));
+        neighbours.Add(HexGrid.GetHexAt(Col + 1, Row - 1));
+        neighbours.Add(HexGrid.GetHexAt(Col - 1, Row + 1));        
+
+        return neighbours;
+
+    }
+
     public float EntryCost(float costSoFar, IQPathTile sourceTile, IQPathUnit theUnit)
     {
         return ((Unit)theUnit).PathValue(this, costSoFar);
@@ -151,7 +175,11 @@ public class Hex : IQPathTile {
 
     public static float CostEstimate(IQPathTile aa, IQPathTile bb)
     {
+
         return Distance((Hex)aa, (Hex)bb);
+
+
+
     }
 
     public static float Distance(Hex a, Hex b)
@@ -169,6 +197,24 @@ public class Hex : IQPathTile {
                 Mathf.Abs(a.Aggregate - b.Aggregate)
             );
         return Dis ;
+    }
+
+    public float terrainModifier()
+    {
+        float modifier = 1;      
+        switch (terrain)
+        {
+            case Terrain.Normal:
+                modifier = 1;
+                break;
+            case Terrain.Cover:
+                modifier = 0.8f;
+                break;
+            case Terrain.Elevation:
+                modifier = 1.1f;
+                break;
+        }
+        return modifier;
     }
 
 

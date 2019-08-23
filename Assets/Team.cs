@@ -4,99 +4,41 @@ using UnityEngine;
 
 public class Team {
 
-    public string Type;
-    public List<Squad> squads;
 
-    public Team(string TYPE)
+
+
+    public string Name;
+    public HashSet<Unit> units;
+    public List<List<Unit>> squads;
+
+
+
+    public Team(string NAME)
     {
-        Type = TYPE;
-        squads = new List<Squad>();
+        Name = NAME;
+        units = new HashSet<Unit>();
+        squads = new List<List<Unit>>();
     }
 
-    public Squad FindSquadByUnit(Unit unit)
+
+
+    public void AddUnit(Unit u)
     {
-
-        Squad b = new Squad(null);
-
-        foreach (Squad s in squads)
-        {
-            if (s.MatchUnit(unit))
-            {
-                b = s;
-            }
-        }
-
-        
-
-        return b;
-
-    }
-    public bool CheckPresence(string Type)
-    {
-
-        bool Exists = false;
-
-        foreach (Squad s in squads)
-        {
-            if (Type == s.identifier)
-            {
-                Exists = true;
-            }
-        }
-
-        return Exists;
-
+        units.Add(u);
     }
 
-    public Squad ReturnSquadByType(string Type)
+    public List<Unit> squad(Unit u)
     {
-        Squad retrunSquad = new Squad(Type);
-        foreach (Squad s in squads)
+        List<Unit> list = new List<Unit>();
+        foreach (Unit unit in this.units)
         {
-            if (Type == s.identifier)
+            if (unit.squad == u.squad)
             {
-                retrunSquad = s;  
-                return s;
-            }
-        }
-
-        return retrunSquad;
-
-    }
-
-    public HashSet<Unit> GetUnitsInTeam()
-    {
-        HashSet<Unit> units = new HashSet<Unit>();
-        foreach (Squad s in squads)
-        {
-            foreach (Unit b in s.units)
-            {
-                units.Add(b); 
+                list.Add(unit);
             }
 
-
         }
-        return units;
+        return list;
     }
-
-    public void addSquad(Squad s)
-    {
-        squads.Add(s);
-    }
-    public int FindIndexOfSquad(string Type)
-    {
-        int i = 0;
-        foreach (Squad s in squads)
-        {
-            if (Type == s.identifier)
-            {
-                return i; 
-            }
-         i++;
-        }
-
-        return i;
-    }
-
 
 }

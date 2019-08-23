@@ -6,24 +6,33 @@ public class UnitView : MonoBehaviour {
 
     void Start()
     {
-        oldposition = newposition = this.transform.position;
+        newposition = this.transform.position;
     }
-
-    Vector3 oldposition;
     Vector3 newposition;
 
     Vector3 currentVelocity;
     float movement = 0.5f;
 
 	public void onUnitMoved(Hex oldHex, Hex newHex)
-    { 
-        //Animation
-        oldposition = oldHex.PositionFromCamera();
+    {
+        Vector3 oldposition = oldHex.PositionFromCamera();
         newposition = newHex.PositionFromCamera();
-        GameObject.FindObjectOfType<HexGrid>().animOn = true;
+        currentVelocity = Vector3.zero;
+
+
+        this.transform.position = oldposition;
+
+        if (Vector3.Distance(this.transform.position, newposition) > 2)
+        {
+            this.transform.position = newposition;
+        }
+        else
+        {
+            GameObject.FindObjectOfType<HexGrid>().animOn = true;
+        }
 
     }
-    
+
 
     void Update()
     {

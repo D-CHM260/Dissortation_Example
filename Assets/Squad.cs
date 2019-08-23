@@ -1,4 +1,4 @@
-﻿using System.Collections;
+﻿/*using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -51,4 +51,15 @@ public class Squad {
 
     }
 
-}
+    public void setHEX(Unit unit, Hex hex)
+    {
+        foreach (Unit u in units)
+        {
+            if (unit == u)
+            {
+                u.SetHex(hex);
+            }
+        }
+    }
+
+} */

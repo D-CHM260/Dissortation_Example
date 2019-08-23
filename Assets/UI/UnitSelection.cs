@@ -25,4 +25,11 @@ public class UnitSelection : MonoBehaviour {
             Wounds.text = string.Format("{0}/{1}", mouseController.Selectedunit.WoundsRem, mouseController.Selectedunit.Wounds);
         }
 	}
+
+    public void set(Unit unit)
+    {
+        Title.text = unit.name;
+        Movement.text = string.Format("{0}/{1}", unit.movesRem, unit.moves);
+        Wounds.text = string.Format("{0}/{1}", unit.WoundsRem, unit.Wounds);
+    }
 }
